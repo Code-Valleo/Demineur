@@ -1,0 +1,421 @@
+"""
+Auteur : Dias Valentin
+
+date : 15/11/23
+
+but (copier-coller de la consigne): La variante du démineur( jeu ou le but
+    est de découvrir les cases du plateau sans tomber sur une bombe, les cases decouvertes auront
+    alors un indice indiquant le nombre de bombes autour de la case decouverte) proposée sera constituée de 3 niveaux.
+— Niveau 0 (Facile) : La grille de jeu est de taille N=9 et la position des bombes est lue dans le fichier bombes.txt
+
+— Niveau 1 (Moyen) : La grille de jeu de taille N donnée par le joueur avec N∗N // 5 bombes
+    placées aléatoirement dans la grille
+
+— Niveau 2 (Difficile/WTF !) : Comme pour le niveau 2, sauf que les bombes se déplacent
+    à la fin de chaque tour du joueur si celui-ci n’a pas sélectionné une case contenant une
+    bombe. Ainsi, une nouvelle grille de jeu est proposée à chaque tour. Celle-ci aura la même
+    avancée de jeu mais des bombes placés différemment. Pensez-donc à recalculer les bombes
+    adjacentes à vos cases déjà ouvertes.
+    Vous devez considérer une division entière dans le cas où le nombre de bombe est un nombre
+    flottant. Les grilles considérées sont carrées de taille N donnée par le joueur en début de partie pour
+    les niveaux 2 et 3. Pour la difficulté facile, votre jeu utilisera une grille existante qui lui sera transmise sous la forme d’un dictionnaire. Les clés du dictionnaire sont des tuples (ordonnée,abscisse)
+    identifiant une case de la grille. Une bombe est indiquée en créant une entrée dans le dictionnaire
+    associant au tuple identifiant la case la chaîne de caractères "B" comme valeur. Seules les cases
+    comportant une bombe sont reprises dans le dictionnaire.
+    Outre les bombes, qui doivent impérativement être dans un dictionnaire commme mentionné
+    ci-dessus, vous êtes libres d’utiliser les structures de données qui vous semblent les plus judicieuses au sein de votre programme.
+    La grille du niveau 1 est de taille N=9 et les positions des bombes sont récupérés dans le fichier
+    bombes.txt .
+
+Entrées : un niveau de difficulté allant de 0 à 2, une taille de grille pour le niveau 1 et 2 et pour finir une case avce ses
+    coordonnées X,Y à chaque tour
+
+Sorties : Soit une modification du plateau et si plus de cases possibles sauf des bombes alors une victoire si on rentre les coordonnées du bombes
+    alors la défaite
+"""
+
+
+from random import randint #importation de randint du module random qui servira à poser les bombes(niveau 1 et 2)
+import os
+import time #Seulement utile si l'utilisateur rentre une grille > 26
+
+global tour #Fonction globale pour calculer les tours
+global matrix #Fonction globale pour stocker la matrice modifiée par un input d'une case
+
+def print_game_over():
+    """
+    Fonction qui print un art ASCII trouvé sur internet et je n'ai donc pas réaliser ce GAME OVER
+    """
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("""
+┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼
+███▀▀▀██┼███▀▀▀███┼███▀█▄█▀███┼██▀▀▀
+██┼┼┼┼██┼██┼┼┼┼┼██┼██┼┼┼█┼┼┼██┼██┼┼┼
+██┼┼┼▄▄▄┼██▄▄▄▄▄██┼██┼┼┼▀┼┼┼██┼██▀▀▀
+██┼┼┼┼██┼██┼┼┼┼┼██┼██┼┼┼┼┼┼┼██┼██┼┼┼
+███▄▄▄██┼██┼┼┼┼┼██┼██┼┼┼┼┼┼┼██┼██▄▄▄
+┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼
+███▀▀▀███┼▀███┼┼██▀┼██▀▀▀┼██▀▀▀▀██▄┼
+██┼┼┼┼┼██┼┼┼██┼┼██┼┼██┼┼┼┼██┼┼┼┼┼██┼
+██┼┼┼┼┼██┼┼┼██┼┼██┼┼██▀▀▀┼██▄▄▄▄▄▀▀┼
+██┼┼┼┼┼██┼┼┼██┼┼█▀┼┼██┼┼┼┼██┼┼┼┼┼██┼
+███▄▄▄███┼┼┼─▀█▀┼┼─┼██▄▄▄┼██┼┼┼┼┼██▄
+┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼██┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼██┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼████▄┼┼┼▄▄▄▄▄▄▄┼┼┼▄████┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼▀▀█▄█████████▄█▀▀┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼█████████████┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼██▀▀▀███▀▀▀██┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼██┼┼┼███┼┼┼██┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼█████▀▄▀█████┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼┼███████████┼┼┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼▄▄▄██┼┼█▀█▀█┼┼██▄▄▄┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼▀▀██┼┼┼┼┼┼┼┼┼┼┼██▀▀┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼▀▀┼┼┼┼┼┼┼┼┼┼┼▀▀┼┼┼┼┼┼┼┼┼┼┼
+┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼
+    """)
+    time.sleep(1000)
+def plateau(case, clique, taille_grille, voisin):
+    """
+    Création du plateau qui commence par print les numéros en appelant la fonction print_numéro et ensuite print la matrice
+    ainsi que les lettres se trouvant à chaque debut de ligne
+    :param case:
+    :param clique:
+    :param n:
+    :param cal_bombes:
+    :return:
+    """
+    if tour > 0 :
+        os.system('cls' if os.name == 'nt' else 'clear')
+    print_numero(taille_grille) #appel de la fonction "numero" pour print les numéros
+    matrix_recu = matrice(case, clique, taille_grille, voisin) #appel de la fonction "matrice"
+    for ligne in range(taille_grille):
+        print(" ", end='')
+        print(chr(65 + ligne), end=' | ') # le chr(65) qui est donc la lettre A (majuscule)
+        for colonne in range(taille_grille):
+            print(matrix_recu[ligne][colonne], end=' | ')
+        print()
+    return " "
+
+
+def print_numero(taille_grille):
+    """
+    fonction qui print les numéros de 0 à n afin de servir de première ligne du plateau et ainsi indiquer
+    les colonne de celui-ci
+    :param n:
+    :return:
+    """
+    numero_comptage = 1
+    print("   ", numero_comptage, end='')
+    for numero in range(2, taille_grille + 1):
+        if numero <= 9:
+            numero_comptage += 1
+            print('  ', numero, end='')
+        elif numero > 9:
+            numero_comptage += 1
+            print(' ', numero, end='') #Au dessu de 9 espace réduit pour éviter des problème d'indentation
+    print()
+
+
+def matrice(case, clique, taille_grille, voisin):
+    """
+    initialisation de la matrice ainsi que sa modification stockée dans la global_matrix
+    :param case:
+    :param clique:
+    :param n:
+    :param cal_bombes:
+    :return:
+    """
+    global global_matrix
+
+    if tour == 0: #seulement au tour 0 pour éviter de reinitisalier la matrice à chque appel de le fonction
+        global_matrix = [["*" for ligne in range(taille_grille)] for colonne in range(taille_grille)]
+        return global_matrix
+
+    if not clique:
+        global_matrix[case[0]][case[1]] = "B" #si on rentre les coordonnées d'une bombe affiche 'B'
+    else:
+        global_matrix[case[0]][case[1]] = voisin #si la fonction clique renvoie True alors la matrice est modifiée
+
+    return global_matrix
+
+
+
+
+def pose_bombes(taille_grille, niveau,case_entree):
+    """
+    pose les bombes sur le plateau avec une lecture de fichier si niveau == 0 sinon utilisation du module random
+    :param taille_grille:
+    :param niveau:
+    :return:
+    """
+    if niveau == 0:
+        dico_bombes = lect_bombes("bombes.txt") #lecture des coordonnées des bombes dans un fichier
+        print(f"Dans ce plateau il y a {len(dico_bombes)} mines, essaye de les éviter !") #f-string pour afficher le nombres de bombes sur le plateau
+    else:
+        intermediaire = set()
+        nb_bombes = (taille_grille * taille_grille) // 5
+        print(f"le champs est rempli de mines, ici il y a {nb_bombes} mines, essaye de les éviter !") #f-string pour afficher le nombres de bombes sur le plateau
+        n = taille_grille                      # taille_grille remplacée par n pour faciliter l'écriture
+        while len(intermediaire) < nb_bombes : #boucle tant que intermédiaire < nombre de bombes ce qui est imporant car si une bombes est en coin elle ne peut pas etre ajoutée
+            x = randint(0, taille_grille - 1)
+            y = randint(0, taille_grille - 1)
+            tuple_loc = (x,y)
+            if tuple_loc == (0, 0) or tuple_loc == (0, n - 1) or tuple_loc == (n - 1 ,0) or tuple_loc == (n - 1, n - 1) or tuple_loc in case_entree: #coordonnées des bombes interdites
+                pass
+            else:
+                intermediaire.add(tuple_loc)
+        dico_bombes = {}.fromkeys(intermediaire, "B") #création du dictionnaire de bombes
+    return dico_bombes
+
+
+def lect_bombes(fichier):
+    """
+    Fonction pour la lecture du fichier bombes.txt servant à initialiser les bombes du niveau 1
+    :param fichier:
+    :return:
+    """
+    dico_bombes = {}
+    with open(fichier, "r", encoding='utf-8') as f:
+        for ligne in f.readlines():
+            sx, sy = ligne.split(",")
+            x, y = int(sx), int(sy)
+            dico_bombes[(x, y)] = "B"
+    return dico_bombes
+
+
+def case_input(case_entree):
+    """
+    Fonction de récupération de l'input de l'utilisateur lorsqu'on lui demande les coordonnées d'une case
+    :param a:
+    :return:
+    """
+    case = []
+    x = ord(case_entree[0].upper()) - ord("A")
+    y = int(case_entree[1:]) - 1
+    case.append(x)
+    case.append(y)
+    return case
+
+def voisin(case, bombes):
+    """
+    Fonction pour calculer le nombre de bombes se trouvant autour de la case rentrée dans le input
+    :param case:
+    :return:
+    """
+    x = case[0]
+    y = case[1]
+    bombes_voisines = 0
+    for ligne in range(-1, 2):
+        for colonne in range(-1, 2):
+            if not x + ligne == 0 or not y + colonne == 0 :
+                if (x + ligne, y + colonne) in bombes :
+                    bombes_voisines += 1
+    return bombes_voisines
+
+
+def voisine(case,bombes):
+    """
+    Fonction similaire à la précédente mais servant autre part (sans cette fonction sans doute besoin de cette fonction en global donc j'ai préféré refaire la fonction
+    :param case:
+    :return:
+    """
+    x = case[0]
+    y = case[1]
+    vois1 = 0
+    for ligne in range(-1, 2):
+        for colonne in range(-1, 2):
+            if not x + ligne == 0 or not y + colonne == 0 :
+                if (x + ligne, y + colonne) in bombes :
+                    vois1 += 1
+    return vois1
+
+
+def voisin_coordonnée(case, bombes,matrice):
+    """
+    Fonction qui renvoie les coordonnées des cases se trouvant autour de la case rentrée en input
+    :param case:
+    :return:
+    """
+    voisin_lst = []
+    x = case[0]
+    y = case[1]
+    for ligne in range(-1, 2):
+        for colonne in range(-1, 2):
+            if not ligne == 0 or not colonne == 0:
+                if (case[0] + ligne, case[1] + colonne) not in bombes and 0 <= case[0] + ligne < len(matrice) and 0 <= case[1] + colonne < len(matrice):
+                    voisin_lst.append([x + ligne, y + colonne])
+    return voisin_lst
+def remplacementc(case_entree,voisin_lst) :
+    """
+    Fonction qui va modifié la matrice lorsque les bombes se deplace (seulement niveau 2)
+    :param case_entree:
+    :param voisin_lst:
+    :return:
+    """
+    indice = 0
+    for tuple in case_entree :
+        global_matrix[tuple[0]][tuple[1]] = voisin_lst[indice]
+        indice += 1
+
+def calc_bombe(bombes, matrice, case):
+    """
+    Fonction qui permet d'étendre les cases visible si la case en input n'avait pas de bombes autour d'elle
+    :param bombes:
+    :param voisin:
+    :return:
+    """
+    for ligne in range(-1, 2):
+        for colonne in range(-1, 2):
+            if (case[0] + ligne, case[1] + colonne) not in bombes and 0 <= case[0] + ligne < len(matrice) and 0 <= case[1] + colonne < len(matrice):
+                n = []
+                n.append(case[0] + ligne)
+                n.append(case[1] + colonne)
+                bombes_autour = voisin(n, bombes)
+                if bombes_autour == 0 :
+                    matrice[case[0] + ligne][case[1] + colonne] = ' '
+                else :
+                    matrice[case[0] + ligne][case[1] + colonne] = bombes_autour
+
+
+
+
+def clique(posebombe, case):
+    """
+    Fonction qui vérifie si la case rentrée à la meme coordonnée qu'une des bombes du dictionnaire ou pas
+    :param posebombe:
+    :param case:
+    :return:
+    """
+    a = case[0]
+    b = case[1]
+    case1 = []
+    case1.append((a, b))
+    for bombes in posebombe.keys():
+        if bombes in case1:  #regarde si la case à la meme valeur(qui sont les coordonnées des bombes) que les clefs provenant du dictionnaire posebombes
+            return False
+    return "OK !"
+
+
+def verifieur_matrice(matrice):
+    """
+    Fonction qui lit chaque élément de la matrice pour voir si une bombe à été révélée et compte les cases non révélées
+    :param f:
+    :return:
+    """
+    case_non_revelee = 0
+    for case in matrice :
+        case_non_revelee += case.count("*") # compteur de '*' pour connaitre le nombre de cases non dévoilée
+
+    for ligne in matrice:
+        for case_bombe in ligne:
+            if case_bombe == 'B':
+                return False
+    return case_non_revelee
+
+
+def jeu(niveau):
+    """
+    fonction principale
+    :param niveau:
+    :return:
+    """
+    global tour
+    tour = 0
+    if niveau == 0:
+        taille_grille = 9
+
+    else:
+        str_taille_grille = input("Veuillez entrer un nombre entre 1 et 26 correspondant aux nombres de lignes et de colonnes du plateau: ")
+        while not str_taille_grille.isdecimal() :
+            str_taille_grille = input(f"{taille_grille} n'est pas un nombre entier positif. Veuillez entrer un nombre entre 1 et 26 correspondant aux nombres de lignes et de colonnes du plateau: ")
+        taille_grille = int(str_taille_grille)
+        if taille_grille > 26:
+                print("Les lignes au dessus de 26 ne seront plus représentées par des lettres majuscules")
+                time.sleep(4)
+
+    intialisation_plateau = plateau(None, None, taille_grille, None)
+    print(intialisation_plateau)
+    poseur_bombes = pose_bombes(taille_grille, niveau, [])
+    case_in = []
+    while True:
+        if tour == 0 :
+            choix_case = input("Veuillez entrer une case (ligne, colonne) :")
+            while not choix_case[0].isalpha() or not choix_case[1].isdecimal() :
+                choix_case = input(f"Vous avez entrée {choix_case}.Veuillez entrer une case (ligne(une lettre), colonne(un chiffre)) :")
+            tour += 1
+        else :
+            choix_case = input("Veuillez entrer une case :")
+            while not choix_case[0].isalpha() or not choix_case[1].isdecimal() :
+                choix_case = input(f"Vous avez entrée {choix_case}.Veuillez entrer une case valide:")
+        case = case_input(choix_case)
+        case_in.append(case)
+        if niveau == 0 or niveau == 1:
+            bombes_voisine = voisin(case,poseur_bombes)
+            choix = clique(poseur_bombes, case)
+            matrice_modifiee = matrice(case, choix, taille_grille, choix)
+            if bombes_voisine == 0 :
+                calc_bombe(poseur_bombes, matrice_modifiee, case)
+            intialisation_plateau = plateau(case, choix, taille_grille, bombes_voisine)
+            print(intialisation_plateau)
+            if not verifieur_matrice(matrice_modifiee):
+                return print_game_over()
+            if niveau == 0 and verifieur_matrice(matrice_modifiee) == len(poseur_bombes):
+                print('Bravo ! Tu as gagné')
+                time.sleep(1000)
+                return
+            if (niveau == 1 or niveau == 2) and verifieur_matrice(matrice_modifiee) == len(poseur_bombes):
+                print('Bravo ! Tu as gagné')
+                time.sleep(1000)
+                return
+        elif niveau == 2 :
+            poseur_bombes = pose_bombes(taille_grille, niveau, case_in)
+            bombes_voisine = voisin(case,poseur_bombes)
+            choix = clique(poseur_bombes, case)
+            matrice(case, choix, taille_grille, bombes_voisine)
+            lst_voisin = []
+            for elem in case_in :
+                matrice_modifiee = voisine(elem, poseur_bombes)
+                lst_voisin.append(matrice_modifiee )
+            for element in lst_voisin :
+                remplacementc(case_in, lst_voisin)
+
+            choix = clique(poseur_bombes, case)
+            matrice_modifiee = matrice(case, choix, taille_grille, bombes_voisine)
+            if bombes_voisine == 0:
+                calc_bombe(poseur_bombes, matrice_modifiee, case)
+
+            intialisation_plateau = plateau(case, choix, taille_grille, c)
+            print(intialisation_plateau)
+            if not verifieur_matrice(matrice_modifiee):
+                return print_game_over()
+            if niveau == 0 and verifieur_matrice(matrice_modifiee) == len(poseur_bombes):
+                print('Bravo ! Tu as gagné')
+                time.sleep(1000)
+                return
+            if (niveau == 1 or niveau == 2) and verifieur_matrice(matrice_modifiee) == len(poseur_bombes):
+                print('Bravo ! Tu as gagné')
+                time.sleep(1000)
+                return
+
+
+
+
+
+
+
+
+print("\033[92m""---" * 14)
+print()
+print(" " * 8, end='')
+print("BIENVENUE DANS LE JEU !")
+print()
+print("---" * 14)
+print("\033[97m")
+print("(0) : Facile, (1) : moyen, (2) : difficile")
+niveau = int(input("Veuillez entrer un niveau de difficulté :"))
+if niveau > 2 :
+    while niveau > 2 :
+        print("Vous ne pouvez entrer que 3 niveaux ==> (0) : Facile, (1) : moyen, (2) : difficile")
+        niveau = int(input("Veuillez entrer un niveau de difficulté :"))
+debut_du_jeu = jeu(niveau)
